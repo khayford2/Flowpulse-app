@@ -83,12 +83,7 @@ st.markdown("""
 
 # Define the directory where model and scaler files are stored
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
-if not os.path.exists(MODEL_DIR):
-    st.error(f"Model directory not found: {MODEL_DIR}")
-    st.stop()
 
-# Change to the model directory
-os.chdir(MODEL_DIR)
 
 # Function to load models and scalers
 @st.cache_resource
