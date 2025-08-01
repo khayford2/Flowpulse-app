@@ -83,12 +83,7 @@ st.markdown("""
 
 # Define the directory where model and scaler files are stored
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
-if not os.path.exists(MODEL_DIR):
-    st.error(f"Model directory not found: {MODEL_DIR}")
-    st.stop()
 
-# Change to the model directory
-os.chdir(MODEL_DIR)
 
 # Function to load models and scalers
 @st.cache_resource
@@ -102,15 +97,17 @@ def load_models():
         'p2_tt': 'P2_TT.pkl',
         'p1_pt': 'P1_PT.pkl',
         'p1_tt': 'P1_TT.pkl',
-        'rb_pt': 'RB_PT.joblib',
-        'rb_tt': 'RB_TT.joblib'
+        'rb_pt': 'RB_PT.pkl',
+        'rb_tt': 'RB_TT.pkl'
     }
     
     scaler_files = {
         'p2': 'scaler_p2.pkl',
         'p2t':'scaler_p2t.pkl',
         'p1': 'scaler_p1.pkl',
-        'p1t':'scaler_p1t.pkl'
+        'p1t':'scaler_p1t.pkl',
+        'rb':'scaler_RB.pkl',
+        'rbt':'scaler_RBt.pkl'
     }
     
     # Display current working directory for debugging
@@ -344,13 +341,17 @@ with col2:
                     
                     # Prepare RB input (5 features)
                     rb_input = np.array([[cumulative_oil, cumulative_water, cumulative_gas, 
-                                        p1_pressure, p1_temperature]])
-                    if rb_input.shape[1] != 5:
-                        raise ValueError(f"RB model expects 5 features, but got {rb_input.shape[1]}")
+                                        p1_pressure]])
+                    rb_inputt = np.array([[cumulative_oil, cumulative_water, cumulative_gas, 
+                                        p1_temperature]])
+                    if rb_input.shape[1] != 4:
+                        raise ValueError(f"RB model expects 4 features, but got {rb_input.shape[1]}")
+                    rb_input_scaled = scalers['rb'].transform(rb_input)
+                    rbt_input_scaled = scalers['rbt'].transform(rb_inputt)
                     
-                    # Predict RB (no scaling)
-                    rb_pressure = models['rb_pt'].predict(rb_input)[0]
-                    rb_temperature = models['rb_tt'].predict(rb_input)[0]
+                    # Predict RB 
+                    rb_pressure = models['rb_pt'].predict(rb_input_scaled)[0]
+                    rb_temperature = models['rb_tt'].predict(rbt_input_scaled)[0]
                     
                     # Display predictions with enhanced styling
                     st.markdown("## 🎯 Prediction Results")
@@ -457,8 +458,8 @@ with col2:
                         'Location': ['Manifold 1 (P2)', 'Manifold 2 (P1)', 'Riser Base (RB)'],
                         'Pressure (bar)': [f"{p2_pressure:.2f}", f"{p1_pressure:.2f}", f"{rb_pressure:.2f}"],
                         'Temperature (°C)': [f"{p2_temperature:.2f}", f"{p1_temperature:.2f}", f"{rb_temperature:.2f}"],
-                        'Model Type': ['Random Forest', 'Decision Tree', 'Decision Tree'],
-                        'Input Features': ['JX-23 Only (Scaled)', 'All Wells + P2 (Scaled)', 'Cumulative + P1 (Unscaled)']
+                        'Model Type': ['Esembled', 'Random Forest', 'Esembled'],
+                        
                     }
                     
                     df = pd.DataFrame(summary_data)
@@ -480,6 +481,6 @@ st.markdown("""
 <div style="text-align: center; color: #666; padding: 20px;">
     <p>🛢️ Oil Field Sensor Monitoring System | Predictive Analytics for Wells JX-23, JX-53, JX-71</p>
     <p>THIS PREDICTIVE APP CAN MAKE MISTAKES SO BE CAREFUL WHEN USING IT!</p>
-    <p><strong>Prediction Pipeline:</strong> JX-23 → P2 → All Wells + P2 → P1 → Cumulative + P1 → RB</p>
+    <p><strong>Prediction Pipeline:</strong> Dev Kelvin Hayford</p>
 </div>
 """, unsafe_allow_html=True)
