@@ -498,9 +498,6 @@ with col2:
                             <div style="font-size: 1.2em;">
                                 <strong>Temperature:</strong> {p2_temperature:.2f} °C
                             </div>
-                            <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
-                                Model: Random Forest (Scaled Input)
-                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                     
@@ -513,9 +510,6 @@ with col2:
                             </div>
                             <div style="font-size: 1.2em;">
                                 <strong>Temperature:</strong> {p1_temperature:.2f} °C
-                            </div>
-                            <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
-                                Model: Decision Tree (Scaled Input)
                             </div>
                         </div>
                         """, unsafe_allow_html=True)
@@ -530,55 +524,267 @@ with col2:
                             <div style="font-size: 1.2em;">
                                 <strong>Temperature:</strong> {rb_temperature:.2f} °C
                             </div>
-                            <div style="font-size: 0.9em; margin-top: 10px; opacity: 0.8;">
-                                Model: Decision Tree (Unscaled Input)
-                            </div>
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Create visualization of predictions
-                    st.markdown("### 📈 Prediction Visualization")
+                    # Create visualization of predictions with historical comparison
+                    st.markdown("### 📈 Prediction Visualization & Historical Comparison")
                     
-                    locations = ['Manifold 1 (P2)', 'Manifold 2 (P1)', 'Riser Base (RB)']
-                    pressures = [p2_pressure, p1_pressure, rb_pressure]
-                    temperatures = [p2_temperature, p1_temperature, rb_temperature]
+                    # Create tabs for different visualizations
+                    viz_tab1, viz_tab2 = st.tabs(["📊 Current vs Previous", "📈 Trend Analysis"])
                     
-                    fig = make_subplots(
-                        rows=1, cols=2,
-                        subplot_titles=("Pressure Profile", "Temperature Profile"),
-                        specs=[[{"secondary_y": False}, {"secondary_y": False}]]
-                    )
+                    with viz_tab1:
+                        # Current prediction profile
+                        locations = ['Manifold 1 (P2)', 'Manifold 2 (P1)', 'Riser Base (RB)']
+                        current_pressures = [p2_pressure, p1_pressure, rb_pressure]
+                        current_temperatures = [p2_temperature, p1_temperature, rb_temperature]
+                        
+                        fig = make_subplots(
+                            rows=1, cols=2,
+                            subplot_titles=("Pressure Comparison", "Temperature Comparison"),
+                            specs=[[{"secondary_y": False}, {"secondary_y": False}]]
+                        )
+                        
+                        # Current predictions
+                        fig.add_trace(
+                            go.Scatter(
+                                x=locations, y=current_pressures,
+                                mode='lines+markers',
+                                name="Current Pressure",
+                                line=dict(color='rgba(30, 60, 114, 1)', width=4),
+                                marker=dict(size=12, symbol='circle')
+                            ),
+                            row=1, col=1
+                        )
+                        
+                        fig.add_trace(
+                            go.Scatter(
+                                x=locations, y=current_temperatures,
+                                mode='lines+markers',
+                                name="Current Temperature",
+                                line=dict(color='rgba(255, 99, 132, 1)', width=4),
+                                marker=dict(size=12, symbol='circle')
+                            ),
+                            row=1, col=2
+                        )
+                        
+                        # Add previous predictions if available
+                        if len(st.session_state.predictions_history) > 1:
+                            # Get the last few predictions for comparison
+                            comparison_count = min(3, len(st.session_state.predictions_history) - 1)
+                            colors_pressure = ['rgba(30, 60, 114, 0.4)', 'rgba(30, 60, 114, 0.2)', 'rgba(30, 60, 114, 0.1)']
+                            colors_temp = ['rgba(255, 99, 132, 0.4)', 'rgba(255, 99, 132, 0.2)', 'rgba(255, 99, 132, 0.1)']
+                            
+                            for i in range(comparison_count):
+                                prev_pred = st.session_state.predictions_history[-(i+2)]
+                                prev_pressures = [prev_pred['p2_pressure'], prev_pred['p1_pressure'], prev_pred['rb_pressure']]
+                                prev_temperatures = [prev_pred['p2_temperature'], prev_pred['p1_temperature'], prev_pred['rb_temperature']]
+                                
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=locations, y=prev_pressures,
+                                        mode='lines+markers',
+                                        name=f"Previous {i+1}",
+                                        line=dict(color=colors_pressure[i], width=2, dash='dash'),
+                                        marker=dict(size=8, symbol='circle-open')
+                                    ),
+                                    row=1, col=1
+                                )
+                                
+                                fig.add_trace(
+                                    go.Scatter(
+                                        x=locations, y=prev_temperatures,
+                                        mode='lines+markers',
+                                        name=f"Previous {i+1}",
+                                        line=dict(color=colors_temp[i], width=2, dash='dash'),
+                                        marker=dict(size=8, symbol='circle-open')
+                                    ),
+                                    row=1, col=2
+                                )
+                        
+                        fig.update_layout(
+                            height=450,
+                            showlegend=True,
+                            title_text="Current Predictions vs Historical Data",
+                            title_x=0.5,
+                            legend=dict(
+                                orientation="h",
+                                yanchor="bottom",
+                                y=-0.2,
+                                xanchor="center",
+                                x=0.5
+                            )
+                        )
+                        
+                        fig.update_xaxes(title_text="System Location", row=1, col=1)
+                        fig.update_xaxes(title_text="System Location", row=1, col=2)
+                        fig.update_yaxes(title_text="Pressure (bar)", row=1, col=1)
+                        fig.update_yaxes(title_text="Temperature (°C)", row=1, col=2)
+                        
+                        st.plotly_chart(fig, use_container_width=True)
                     
-                    fig.add_trace(
-                        go.Scatter(
-                            x=locations, y=pressures,
-                            mode='lines+markers',
-                            name="Pressure (bar)",
-                            line=dict(color='rgba(30, 60, 114, 0.8)', width=3),
-                            marker=dict(size=10)
-                        ),
-                        row=1, col=1
-                    )
+                    with viz_tab2:
+                        # Trend analysis over time
+                        if len(st.session_state.predictions_history) > 1:
+                            history_df = pd.DataFrame(st.session_state.predictions_history)
+                            history_df['prediction_number'] = range(1, len(history_df) + 1)
+                            
+                            # Create trend charts
+                            trend_fig = make_subplots(
+                                rows=2, cols=3,
+                                subplot_titles=("P2 Pressure Trend", "P1 Pressure Trend", "RB Pressure Trend",
+                                              "P2 Temperature Trend", "P1 Temperature Trend", "RB Temperature Trend"),
+                                vertical_spacing=0.15
+                            )
+                            
+                            # Pressure trends
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['p2_pressure'],
+                                    mode='lines+markers',
+                                    name="P2 Pressure",
+                                    line=dict(color='rgba(30, 60, 114, 0.8)', width=2)
+                                ),
+                                row=1, col=1
+                            )
+                            
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['p1_pressure'],
+                                    mode='lines+markers',
+                                    name="P1 Pressure",
+                                    line=dict(color='rgba(42, 82, 152, 0.8)', width=2)
+                                ),
+                                row=1, col=2
+                            )
+                            
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['rb_pressure'],
+                                    mode='lines+markers',
+                                    name="RB Pressure",
+                                    line=dict(color='rgba(60, 120, 180, 0.8)', width=2)
+                                ),
+                                row=1, col=3
+                            )
+                            
+                            # Temperature trends
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['p2_temperature'],
+                                    mode='lines+markers',
+                                    name="P2 Temperature",
+                                    line=dict(color='rgba(255, 99, 132, 0.8)', width=2)
+                                ),
+                                row=2, col=1
+                            )
+                            
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['p1_temperature'],
+                                    mode='lines+markers',
+                                    name="P1 Temperature",
+                                    line=dict(color='rgba(255, 159, 64, 0.8)', width=2)
+                                ),
+                                row=2, col=2
+                            )
+                            
+                            trend_fig.add_trace(
+                                go.Scatter(
+                                    x=history_df['prediction_number'], 
+                                    y=history_df['rb_temperature'],
+                                    mode='lines+markers',
+                                    name="RB Temperature",
+                                    line=dict(color='rgba(255, 205, 86, 0.8)', width=2)
+                                ),
+                                row=2, col=3
+                            )
+                            
+                            trend_fig.update_layout(
+                                height=600,
+                                showlegend=False,
+                                title_text="Prediction Trends Over Time",
+                                title_x=0.5
+                            )
+                            
+                            # Update x and y axes
+                            for i in range(1, 4):
+                                trend_fig.update_xaxes(title_text="Prediction #", row=1, col=i)
+                                trend_fig.update_xaxes(title_text="Prediction #", row=2, col=i)
+                            
+                            trend_fig.update_yaxes(title_text="Pressure (bar)", row=1, col=1)
+                            trend_fig.update_yaxes(title_text="Pressure (bar)", row=1, col=2)
+                            trend_fig.update_yaxes(title_text="Pressure (bar)", row=1, col=3)
+                            trend_fig.update_yaxes(title_text="Temperature (°C)", row=2, col=1)
+                            trend_fig.update_yaxes(title_text="Temperature (°C)", row=2, col=2)
+                            trend_fig.update_yaxes(title_text="Temperature (°C)", row=2, col=3)
+                            
+                            st.plotly_chart(trend_fig, use_container_width=True)
+                            
+                            # Statistical summary of trends
+                            st.markdown("### 📈 Trend Statistics")
+                            stats_col1, stats_col2, stats_col3 = st.columns(3)
+                            
+                            with stats_col1:
+                                st.markdown("**Pressure Statistics**")
+                                st.write(f"P2 Range: {history_df['p2_pressure'].min():.2f} - {history_df['p2_pressure'].max():.2f} bar")
+                                st.write(f"P1 Range: {history_df['p1_pressure'].min():.2f} - {history_df['p1_pressure'].max():.2f} bar")
+                                st.write(f"RB Range: {history_df['rb_pressure'].min():.2f} - {history_df['rb_pressure'].max():.2f} bar")
+                            
+                            with stats_col2:
+                                st.markdown("**Temperature Statistics**")
+                                st.write(f"P2 Range: {history_df['p2_temperature'].min():.2f} - {history_df['p2_temperature'].max():.2f} °C")
+                                st.write(f"P1 Range: {history_df['p1_temperature'].min():.2f} - {history_df['p1_temperature'].max():.2f} °C")
+                                st.write(f"RB Range: {history_df['rb_temperature'].min():.2f} - {history_df['rb_temperature'].max():.2f} °C")
+                            
+                            with stats_col3:
+                                st.markdown("**Trend Analysis**")
+                                # Calculate simple trend (last vs first)
+                                if len(history_df) > 1:
+                                    p2_trend = "↗️" if history_df['p2_pressure'].iloc[-1] > history_df['p2_pressure'].iloc[0] else "↘️"
+                                    p1_trend = "↗️" if history_df['p1_pressure'].iloc[-1] > history_df['p1_pressure'].iloc[0] else "↘️"
+                                    rb_trend = "↗️" if history_df['rb_pressure'].iloc[-1] > history_df['rb_pressure'].iloc[0] else "↘️"
+                                    
+                                    st.write(f"P2 Pressure Trend: {p2_trend}")
+                                    st.write(f"P1 Pressure Trend: {p1_trend}")
+                                    st.write(f"RB Pressure Trend: {rb_trend}")
+                        else:
+                            st.info("📊 Trend analysis will be available after making multiple predictions.")
                     
-                    fig.add_trace(
-                        go.Scatter(
-                            x=locations, y=temperatures,
-                            mode='lines+markers',
-                            name="Temperature (°C)",
-                            line=dict(color='rgba(255, 99, 132, 0.8)', width=3),
-                            marker=dict(size=10)
-                        ),
-                        row=1, col=2
-                    )
-                    
-                    fig.update_layout(
-                        height=400,
-                        showlegend=False,
-                        title_text="Predicted Values Through System",
-                        title_x=0.5
-                    )
-                    
-                    st.plotly_chart(fig, use_container_width=True)
+                    # Add insight box
+                    if len(st.session_state.predictions_history) > 1:
+                        with st.expander("🔍 Prediction Insights", expanded=False):
+                            latest = st.session_state.predictions_history[-1]
+                            previous = st.session_state.predictions_history[-2]
+                            
+                            st.markdown("**Changes from Previous Prediction:**")
+                            
+                            p2_press_change = latest['p2_pressure'] - previous['p2_pressure']
+                            p1_press_change = latest['p1_pressure'] - previous['p1_pressure']
+                            rb_press_change = latest['rb_pressure'] - previous['rb_pressure']
+                            
+                            p2_temp_change = latest['p2_temperature'] - previous['p2_temperature']
+                            p1_temp_change = latest['p1_temperature'] - previous['p1_temperature']
+                            rb_temp_change = latest['rb_temperature'] - previous['rb_temperature']
+                            
+                            col_insight1, col_insight2 = st.columns(2)
+                            
+                            with col_insight1:
+                                st.markdown("**Pressure Changes:**")
+                                st.write(f"P2: {p2_press_change:+.2f} bar")
+                                st.write(f"P1: {p1_press_change:+.2f} bar") 
+                                st.write(f"RB: {rb_press_change:+.2f} bar")
+                            
+                            with col_insight2:
+                                st.markdown("**Temperature Changes:**")
+                                st.write(f"P2: {p2_temp_change:+.2f} °C")
+                                st.write(f"P1: {p1_temp_change:+.2f} °C")
+                                st.write(f"RB: {rb_temp_change:+.2f} °C")
                     
                     # Display prediction summary table
                     st.markdown("### 📋 Prediction Summary")
@@ -586,9 +792,7 @@ with col2:
                     summary_data = {
                         'Location': ['Manifold 1 (P2)', 'Manifold 2 (P1)', 'Riser Base (RB)'],
                         'Pressure (bar)': [f"{p2_pressure:.2f}", f"{p1_pressure:.2f}", f"{rb_pressure:.2f}"],
-                        'Temperature (°C)': [f"{p2_temperature:.2f}", f"{p1_temperature:.2f}", f"{rb_temperature:.2f}"],
-                        
-                        
+                        'Temperature (°C)': [f"{p2_temperature:.2f}", f"{p1_temperature:.2f}", f"{rb_temperature:.2f}"]
                     }
                     
                     df = pd.DataFrame(summary_data)
@@ -609,18 +813,60 @@ if st.session_state.predictions_history:
     st.markdown("---")
     st.markdown("## 📚 Prediction History")
     
-    # Show last few predictions
-    with st.expander(f"View Recent Predictions ({len(st.session_state.predictions_history)} total)", expanded=False):
-        # Display the last 5 predictions
-        recent_predictions = st.session_state.predictions_history[-5:]
-        for i, pred in enumerate(reversed(recent_predictions), 1):
-            st.markdown(f"""
-            **Prediction #{len(st.session_state.predictions_history) - i + 1}** - {pred['timestamp']}
-            - **P2:** {pred['p2_pressure']:.2f} bar, {pred['p2_temperature']:.2f} °C
-            - **P1:** {pred['p1_pressure']:.2f} bar, {pred['p1_temperature']:.2f} °C  
-            - **RB:** {pred['rb_pressure']:.2f} bar, {pred['rb_temperature']:.2f} °C
-            """)
-            st.markdown("---")
+    # Create a detailed table of all predictions
+    history_df = pd.DataFrame(st.session_state.predictions_history)
+    
+    # Display full prediction history table
+    st.markdown("### Complete Prediction Records")
+    st.dataframe(history_df, use_container_width=True)
+    
+    # Show summary statistics
+    st.markdown("### 📊 Prediction Statistics")
+    col_stats1, col_stats2, col_stats3 = st.columns(3)
+    
+    with col_stats1:
+        st.metric("Total Predictions", len(st.session_state.predictions_history))
+        avg_p2_pressure = history_df['p2_pressure'].mean()
+        st.metric("Avg P2 Pressure", f"{avg_p2_pressure:.2f} bar")
+    
+    with col_stats2:
+        avg_p1_pressure = history_df['p1_pressure'].mean()
+        st.metric("Avg P1 Pressure", f"{avg_p1_pressure:.2f} bar")
+        avg_p2_temp = history_df['p2_temperature'].mean()
+        st.metric("Avg P2 Temperature", f"{avg_p2_temp:.2f} °C")
+    
+    with col_stats3:
+        avg_rb_pressure = history_df['rb_pressure'].mean()
+        st.metric("Avg RB Pressure", f"{avg_rb_pressure:.2f} bar")
+        avg_rb_temp = history_df['rb_temperature'].mean()
+        st.metric("Avg RB Temperature", f"{avg_rb_temp:.2f} °C")
+    
+    # Show recent predictions summary
+    st.markdown("### 🕒 Recent Predictions Summary")
+    recent_predictions = st.session_state.predictions_history[-5:] if len(st.session_state.predictions_history) >= 5 else st.session_state.predictions_history
+    
+    for i, pred in enumerate(reversed(recent_predictions), 1):
+        prediction_num = len(st.session_state.predictions_history) - i + 1
+        with st.expander(f"Prediction #{prediction_num} - {pred['timestamp']}", expanded=False):
+            col_pred1, col_pred2 = st.columns(2)
+            
+            with col_pred1:
+                st.markdown("**Input Parameters:**")
+                st.write(f"- JX-23 Oil: {pred['jx23_oil']:.1f} sm3/hr")
+                st.write(f"- JX-53 Oil: {pred['jx53_oil']:.1f} sm3/hr") 
+                st.write(f"- JX-71 Oil: {pred['jx71_oil']:.1f} sm3/hr")
+                st.write(f"- Total Oil: {pred['cumulative_oil']:.1f} sm3/hr")
+                st.write(f"- Total Water: {pred['cumulative_water']:.1f} sm3/hr")
+                st.write(f"- Total Gas: {pred['cumulative_gas']:.1f} sm3/hr")
+            
+            with col_pred2:
+                st.markdown("**Predicted Values:**")
+                st.write(f"- **P2 Pressure:** {pred['p2_pressure']:.2f} bar")
+                st.write(f"- **P2 Temperature:** {pred['p2_temperature']:.2f} °C")
+                st.write(f"- **P1 Pressure:** {pred['p1_pressure']:.2f} bar")
+                st.write(f"- **P1 Temperature:** {pred['p1_temperature']:.2f} °C")
+                st.write(f"- **RB Pressure:** {pred['rb_pressure']:.2f} bar")
+                st.write(f"- **RB Temperature:** {pred['rb_temperature']:.2f} °C")
 
 # Footer
 st.markdown("---")
