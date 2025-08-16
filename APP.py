@@ -78,12 +78,29 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
+    .instruction-box {
+        background: #e8f4fd;
+        border: 1px solid #bee5eb;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .warning-box {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 # Define the directory where model and scaler files are stored
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
 
+# Initialize session state for storing predictions
+if 'predictions_history' not in st.session_state:
+    st.session_state.predictions_history = []
 
 # Function to load models and scalers
 @st.cache_resource
@@ -140,6 +157,54 @@ def load_models():
     
     return models, scalers
 
+# Function to save predictions
+def save_prediction(inputs, predictions, timestamp):
+    """Save prediction to session state"""
+    prediction_record = {
+        'timestamp': timestamp,
+        'jx23_oil': inputs['jx23_oil'],
+        'jx23_water': inputs['jx23_water'],
+        'jx23_gas': inputs['jx23_gas'],
+        'jx23_pt1': inputs['jx23_pt1'],
+        'jx23_pt2': inputs['jx23_pt2'],
+        'jx23_tt1': inputs['jx23_tt1'],
+        'jx23_tt2': inputs['jx23_tt2'],
+        'jx53_oil': inputs['jx53_oil'],
+        'jx53_water': inputs['jx53_water'],
+        'jx53_gas': inputs['jx53_gas'],
+        'jx53_pt1': inputs['jx53_pt1'],
+        'jx53_pt2': inputs['jx53_pt2'],
+        'jx53_tt1': inputs['jx53_tt1'],
+        'jx53_tt2': inputs['jx53_tt2'],
+        'jx71_oil': inputs['jx71_oil'],
+        'jx71_water': inputs['jx71_water'],
+        'jx71_gas': inputs['jx71_gas'],
+        'jx71_pt1': inputs['jx71_pt1'],
+        'jx71_pt2': inputs['jx71_pt2'],
+        'jx71_tt1': inputs['jx71_tt1'],
+        'jx71_tt2': inputs['jx71_tt2'],
+        'cumulative_oil': inputs['cumulative_oil'],
+        'cumulative_water': inputs['cumulative_water'],
+        'cumulative_gas': inputs['cumulative_gas'],
+        'p2_pressure': predictions['p2_pressure'],
+        'p2_temperature': predictions['p2_temperature'],
+        'p1_pressure': predictions['p1_pressure'],
+        'p1_temperature': predictions['p1_temperature'],
+        'rb_pressure': predictions['rb_pressure'],
+        'rb_temperature': predictions['rb_temperature']
+    }
+    
+    st.session_state.predictions_history.append(prediction_record)
+
+# Function to create CSV download
+def create_csv_download():
+    """Create CSV file from predictions history"""
+    if not st.session_state.predictions_history:
+        return None
+    
+    df = pd.DataFrame(st.session_state.predictions_history)
+    return df.to_csv(index=False)
+
 # Header
 st.markdown("""
 <div class="main-header">
@@ -183,18 +248,63 @@ with st.sidebar:
     if st.button("⚙️ System Settings"):
         st.info("Settings panel coming soon!")
     
-    # Model information
-    st.markdown("### 🤖 Model Information")
-    st.info("""
-    **Active Models:**
-    - P2: Random Forest
-    - P1: Random Forest
-    - RB: Decision Tree
+    # Clear predictions history
+    if st.button("🗑️ Clear History"):
+        st.session_state.predictions_history = []
+        st.success("Prediction history cleared!")
     
-    **Prediction Pipeline:**
-    1. P2 uses JX-23 data (scaled)
-    2. P1 uses all wells + P2 predictions (scaled)
-    3. RB uses cumulative data + P1 predictions (unscaled)
+    # Download predictions as CSV
+    st.markdown("### 📥 Export Data")
+    if st.session_state.predictions_history:
+        csv_data = create_csv_download()
+        st.download_button(
+            label="📄 Download Predictions CSV",
+            data=csv_data,
+            file_name=f"predictions_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+        st.info(f"Total predictions saved: {len(st.session_state.predictions_history)}")
+    else:
+        st.info("No predictions to export yet.")
+    
+    # Usage Instructions
+    st.markdown("### 📖 How to Use This App")
+    st.markdown("""
+    <div class="instruction-box">
+    <h4>Step-by-Step Guide:</h4>
+    <ol>
+        <li><strong>Enter Well Data:</strong> Fill in the flow rates and sensor readings for each well (JX-23, JX-53, JX-71)</li>
+        <li><strong>Review Summary:</strong> Check the cumulative production values</li>
+        <li><strong>Generate Predictions:</strong> Click the prediction button to get results</li>
+        <li><strong>View Results:</strong> Analyze the predicted pressure and temperature values</li>
+        <li><strong>Export Data:</strong> Download your predictions as CSV for record-keeping</li>
+    </ol>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Important Warnings
+    st.markdown("### ⚠️ Important Cautions")
+    st.markdown("""
+    <div class="warning-box">
+    <h4>⚠️ CRITICAL WARNINGS:</h4>
+    <ul>
+        <li><strong>This app can make mistakes!</strong> Always verify predictions with actual field data</li>
+        <li><strong>Not for critical decisions:</strong> Do not use for safety-critical operations without expert verification</li>
+        <li><strong>Model limitations:</strong> Predictions are based on historical data patterns and may not account for unusual conditions</li>
+        <li><strong>Data validation:</strong> Ensure input values are within realistic operational ranges</li>
+        <li><strong>Expert consultation:</strong> Always consult with field engineers before making operational changes</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Additional Notes
+    st.markdown("### 💡 Tips for Best Results")
+    st.info("""
+    - Use realistic input values based on actual well conditions
+    - Cross-reference predictions with historical data
+    - Monitor prediction accuracy over time
+    - Keep records of predictions vs. actual values
+    - Report any unusual predictions to technical team
     """)
 
 # Well input sections
@@ -353,6 +463,25 @@ with col2:
                     rb_pressure = models['rb_pt'].predict(rb_input_scaled)[0]
                     rb_temperature = models['rb_tt'].predict(rbt_input_scaled)[0]
                     
+                    # Save prediction to history
+                    current_inputs = {
+                        'jx23_oil': jx23_oil, 'jx23_water': jx23_water, 'jx23_gas': jx23_gas,
+                        'jx23_pt1': jx23_pt1, 'jx23_pt2': jx23_pt2, 'jx23_tt1': jx23_tt1, 'jx23_tt2': jx23_tt2,
+                        'jx53_oil': jx53_oil, 'jx53_water': jx53_water, 'jx53_gas': jx53_gas,
+                        'jx53_pt1': jx53_pt1, 'jx53_pt2': jx53_pt2, 'jx53_tt1': jx53_tt1, 'jx53_tt2': jx53_tt2,
+                        'jx71_oil': jx71_oil, 'jx71_water': jx71_water, 'jx71_gas': jx71_gas,
+                        'jx71_pt1': jx71_pt1, 'jx71_pt2': jx71_pt2, 'jx71_tt1': jx71_tt1, 'jx71_tt2': jx71_tt2,
+                        'cumulative_oil': cumulative_oil, 'cumulative_water': cumulative_water, 'cumulative_gas': cumulative_gas
+                    }
+                    
+                    current_predictions = {
+                        'p2_pressure': p2_pressure, 'p2_temperature': p2_temperature,
+                        'p1_pressure': p1_pressure, 'p1_temperature': p1_temperature,
+                        'rb_pressure': rb_pressure, 'rb_temperature': rb_temperature
+                    }
+                    
+                    save_prediction(current_inputs, current_predictions, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    
                     # Display predictions with enhanced styling
                     st.markdown("## 🎯 Prediction Results")
                     
@@ -458,7 +587,7 @@ with col2:
                         'Location': ['Manifold 1 (P2)', 'Manifold 2 (P1)', 'Riser Base (RB)'],
                         'Pressure (bar)': [f"{p2_pressure:.2f}", f"{p1_pressure:.2f}", f"{rb_pressure:.2f}"],
                         'Temperature (°C)': [f"{p2_temperature:.2f}", f"{p1_temperature:.2f}", f"{rb_temperature:.2f}"],
-                        'Model Type': ['Esembled', 'Random Forest', 'Esembled'],
+                        
                         
                     }
                     
@@ -466,7 +595,7 @@ with col2:
                     st.dataframe(df, use_container_width=True)
                     
                     # Success message
-                    st.success("✅ Predictions generated successfully!")
+                    st.success("✅ Predictions generated successfully! Data saved to history.")
                     
                 except ValueError as ve:
                     st.error(f"❌ Input validation error: {str(ve)}")
@@ -475,12 +604,30 @@ with col2:
                     st.error(f"❌ Error generating predictions: {str(e)}")
                     st.info("💡 Please check that all model and scaler files are compatible with the input data.")
 
+# Display saved predictions history
+if st.session_state.predictions_history:
+    st.markdown("---")
+    st.markdown("## 📚 Prediction History")
+    
+    # Show last few predictions
+    with st.expander(f"View Recent Predictions ({len(st.session_state.predictions_history)} total)", expanded=False):
+        # Display the last 5 predictions
+        recent_predictions = st.session_state.predictions_history[-5:]
+        for i, pred in enumerate(reversed(recent_predictions), 1):
+            st.markdown(f"""
+            **Prediction #{len(st.session_state.predictions_history) - i + 1}** - {pred['timestamp']}
+            - **P2:** {pred['p2_pressure']:.2f} bar, {pred['p2_temperature']:.2f} °C
+            - **P1:** {pred['p1_pressure']:.2f} bar, {pred['p1_temperature']:.2f} °C  
+            - **RB:** {pred['rb_pressure']:.2f} bar, {pred['rb_temperature']:.2f} °C
+            """)
+            st.markdown("---")
+
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 20px;">
     <p>🛢️ Oil Field Sensor Monitoring System | Predictive Analytics for Wells JX-23, JX-53, JX-71</p>
-    <p>THIS PREDICTIVE APP CAN MAKE MISTAKES SO BE CAREFUL WHEN USING IT!</p>
-    <p><strong>Prediction Pipeline:</strong> Dev Kelvin Hayford</p>
+    <p><strong>⚠️ THIS PREDICTIVE APP CAN MAKE MISTAKES SO BE CAREFUL WHEN USING IT!</strong></p>
+    <p><strong>Prediction Pipeline Developer:</strong> Dev Kelvin Hayford</p>
 </div>
 """, unsafe_allow_html=True)
