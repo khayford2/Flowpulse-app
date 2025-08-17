@@ -873,7 +873,7 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #666; padding: 20px;">
     <p>🛢️ Oil Field Sensor Monitoring System | Predictive Analytics for Wells JX-23, JX-53, JX-71</p>
-    <p><strong>⚠️ THIS PREDICTIVE APP CAN MAKE MISTAKES SO BE CAREFUL WHEN USING IT!</strong></p>
+    <p><strong>⚠️ TECHNIPFMC</strong></p>
     <p><strong>Prediction Pipeline Developer:</strong> Dev Kelvin Hayford</p>
 </div>
 """, unsafe_allow_html=True)
