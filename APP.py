@@ -431,7 +431,7 @@ with col2:
                     
                     # Predict P2
                     p2_pressure = models['p2_pt'].predict(p2_input_scaled)[0]
-                    p2_temperature = models['p2_tt'].predict(p2_input_scaled)[0] 
+                    p2_temperature = models['p2_tt'].predict(t2_input_scaled)[0] 
                     
                     # Prepare P1 input (8 features)
                     p1_input = np.array([[cumulative_oil, cumulative_water, cumulative_gas, 
